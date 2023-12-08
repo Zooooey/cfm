@@ -2,6 +2,10 @@
 import argparse
 from lib import workloads
 from lib import utils
+from distutils.util import strtobool
+
+def str2bool(v):
+    return bool(strtobool(v))
 
 def print_output(workload, args):
     print(workload.stdout.decode('utf-8'), '\n')
@@ -26,7 +30,7 @@ def run_benchmark(args):
     else:
         pinned_cpus = range(workload_class.cpu_req)
 
-    workload = workload_class(args.id, pinned_cpus, args.ratio)
+    workload = workload_class(args.id, pinned_cpus, args.ratio, args.overwrite_container)
 
     try:
         workload.start()
@@ -51,6 +55,8 @@ def main():
                         type=utils.check_ratio)
     parser.add_argument('--id', default=0,
                         help="Workload id used for container name")
+    parser.add_argument('--overwrite_container', default=True, type=str2bool,
+                        help="Overwrite cgroup dir if exist.")
     parser.add_argument('--cpus', default=[],type=lambda l:list(map(int, l.split(','))),
                         help="List of cpus to use for workloads that support it")
 
