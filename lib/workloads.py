@@ -326,19 +326,23 @@ class Memaslap(Workload):
         prefix = 'echo $$ > {} &&'
         memcached_serv = "/usr/bin/time -v memcached -l localhost -p {} -m {} -t 1".format(self.port_number, 
                                                         self.ideal_mem)
+
+        # echo $$ > /path/to/process && exec taskset -c [cpu_list] /usr/bin/time -v memcached -l localhost -p [port] -m [memory] -t 1
         cpu_list = list(pinned_cpus)
         taskset_serv = 'taskset -c {}'.format(cpu_list[0])
         memcached_serv = ' '.join((prefix, 'exec', taskset_serv, memcached_serv))
         memcached_serv = memcached_serv.format(procs_path)
 
+        # taskset -c [cpu_list] memaslap -s localhost:[port] -T 1 -F memaslap/memaslpa_fill --execute_number 30000000
         taskset_memaslap = 'taskset -c {}'.format(cpu_list[1])
         memaslap_fill = taskset_memaslap + ' ' + "memaslap -s localhost:{} -T 1 -F {} --execute_number 30000000"
         memaslap_fill = memaslap_fill.format(self.port_number, "memaslap/memaslap_fill")
 
+        # taskset -c [cpu_list] memaslap -s localhost:[port] -T 1 -F memaslap/memaslpa_etc --execute_number 100000000
         memaslap_query = taskset_memaslap + ' ' + "memaslap -s localhost:{} -T 1 -F {} --execute_number 100000000"
         memaslap_query = memaslap_query.format(self.port_number, "memaslap/memaslap_etc")
-        sleep = 'sleep 5'
-        memaslap_cmd = ' && '.join((memaslap_fill, sleep, memaslap_query))
+        #sleep = 'sleep 5'
+        #memaslap_cmd = ' && '.join((memaslap_fill, sleep, memaslap_query))
         return (memcached_serv, memaslap_fill, memaslap_query)
 
     def start(self):
