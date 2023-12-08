@@ -23,7 +23,7 @@ class Workload:
     min_ratio = None
     cpu_req = None
 
-    def __init__(self, idd, pinned_cpus, mem_ratio=1):
+    def __init__(self, idd, pinned_cpus, mem_ratio=1, is_overwrite_container_dir=True):
 
         self.idd = idd  # a unique uint id for this workload
 
@@ -36,7 +36,7 @@ class Workload:
         # Container creation
         self.mem_ratio = mem_ratio
         self.container = Container(self.get_name(), self.ideal_mem, self.mem_ratio)
-        self.container.create()
+        self.container.create(is_overwrite_container_dir)
         
         # Pin CPUs
         self.pinned_cpus = pinned_cpus
@@ -61,6 +61,7 @@ class Workload:
         self.ts_start = time.time()
         self.popen = subprocess.Popen(self.cmdline, stdout=subprocess.PIPE,
                                       stderr=subprocess.PIPE, shell=True)
+        print("pid is %s"%self.popen.pid)
         self.stdout, self.stderr = self.popen.communicate()  # blocks process exit
         assert(self.popen.returncode == 0)
         self.ts_finish = time.time()
@@ -142,7 +143,8 @@ class Workload:
 
 class Quicksort(Workload):
     wname = "quicksort"
-    ideal_mem = 8250
+    ideal_mem = 2200
+    #ideal_mem = 8800
     min_ratio = 0.65
     min_mem = int(min_ratio * ideal_mem)
     binary_name = "quicksort"
@@ -151,7 +153,9 @@ class Quicksort(Workload):
 
     def get_cmdline(self, procs_path, pinned_cpus):
         prefix = "echo $$ > {} &&".format(procs_path)
-        arg = '8192'
+        #quick memory
+        arg = '2048'
+        #arg = '8192'
         shell_cmd = '/usr/bin/time -v' + ' ' + constants.WORK_DIR + '/quicksort/quicksort {}'.format(arg)
         pinned_cpus_string = ','.join(map(str, pinned_cpus))
         set_cpu = 'taskset -c {}'.format(pinned_cpus_string)
@@ -190,7 +194,7 @@ class Linpack(Workload):
 
 class Tfinception(Workload):
     wname = "tf-inception"
-    ideal_mem = 2120
+    ideal_mem = 1000
     min_ratio = 0.9
     min_mem = int(min_ratio * ideal_mem)
     binary_name = "python3"
@@ -200,6 +204,7 @@ class Tfinception(Workload):
     def get_cmdline(self, procs_path, pinned_cpus):
         work_dir = ''.join((constants.WORK_DIR,
                             '/tensorflow/benchmarks/scripts/tf_cnn_benchmarks'))
+        print(work_dir)
         
         pinned_cpus_string = ','.join(map(str, pinned_cpus))
         set_cpu = 'taskset -c {}'.format(pinned_cpus_string)
@@ -260,7 +265,7 @@ class Tfresnet(Workload):
 
 class Kmeans(Workload):
     wname = "kmeans"
-    ideal_mem = 4847
+    ideal_mem = 2424
     binary_name = "python3"
     min_ratio = 0.75
     min_mem = int(min_ratio * ideal_mem)
@@ -324,7 +329,7 @@ class Memaslap(Workload):
 
     def get_cmdline(self, procs_path, pinned_cpus):
         prefix = 'echo $$ > {} &&'
-        memcached_serv = "/usr/bin/time -v memcached -l localhost -p {} -m {} -t 1".format(self.port_number, 
+        memcached_serv = "/usr/bin/time -v memcached -u root -l localhost -p {} -m {} -t 10".format(self.port_number, 
                                                         self.ideal_mem)
         cpu_list = list(pinned_cpus)
         taskset_serv = 'taskset -c {}'.format(cpu_list[0])
@@ -332,10 +337,10 @@ class Memaslap(Workload):
         memcached_serv = memcached_serv.format(procs_path)
 
         taskset_memaslap = 'taskset -c {}'.format(cpu_list[1])
-        memaslap_fill = taskset_memaslap + ' ' + "memaslap -s localhost:{} -T 1 -F {} --execute_number 30000000"
+        memaslap_fill = taskset_memaslap + ' ' + "memaslap -s localhost:{} -T 10 -F {} --execute_number 300000"
         memaslap_fill = memaslap_fill.format(self.port_number, "memaslap/memaslap_fill")
 
-        memaslap_query = taskset_memaslap + ' ' + "memaslap -s localhost:{} -T 1 -F {} --execute_number 100000000"
+        memaslap_query = taskset_memaslap + ' ' + "memaslap -s localhost:{} -T 10 -F {} --execute_number 3000000"
         memaslap_query = memaslap_query.format(self.port_number, "memaslap/memaslap_etc")
         sleep = 'sleep 5'
         memaslap_cmd = ' && '.join((memaslap_fill, sleep, memaslap_query))

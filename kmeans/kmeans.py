@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.cluster import KMeans
-from sklearn.datasets.samples_generator import make_blobs
+#from sklearn.datasets.samples_generator import make_blobs
+from sklearn.datasets import make_blobs
 
 np.random.seed(42)
 

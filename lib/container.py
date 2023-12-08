@@ -49,16 +49,23 @@ class Container:
     def get_procs_path(self):
         return self.get_cont_path() + '/cgroup.procs'
 
-    def create(self):
+    def create(self, del_if_exist=True):
         """creates new container as child of CGROUP_PATH"""
         new_cont_path = self.get_cont_path()
-        try:
-            os.mkdir(new_cont_path)
-            assert self.exists()
-        except FileExistsError:
-            print("container {} already exists, trying to delete".format(self.name))
-            self.delete()
-            os.mkdir(new_cont_path)
+        if del_if_exist:
+            if os.path.exists(new_cont_path):
+                print("container {} already exists, trying to delete".format(self.name))
+                self.delete()
+                os.mkdir(new_cont_path)
+            else:
+                os.mkdir(new_cont_path)
+                assert self.exists()
+        else:
+            if os.path.exists(new_cont_path):
+                  print("container {} already exists, will not create it again!")
+            else:
+                   os.mkdir(new_cont_path)
+                   assert self.exists()
         self.set_memory_limit()
 
     def get_pids(self):
